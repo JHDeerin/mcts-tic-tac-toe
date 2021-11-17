@@ -5,8 +5,8 @@ This handles
 """
 import dataclasses
 import enum
-import random
 from typing import List
+
 
 class Mark(enum.Enum):
     BLANK=0
@@ -14,7 +14,7 @@ class Mark(enum.Enum):
     O=2
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class Point:
     row: int=0
     col: int=0
@@ -86,6 +86,14 @@ class Board:
         won_diagonally_up = self._check_win_pos(last_placement, team, Point(-1,1))
         return won_vertically or won_horizontally or won_diagonally_down or won_diagonally_up
 
+    def check_if_win_anywhere(self, team: Mark) -> bool:
+        for row_index, row in enumerate(self._board):
+            for col_index, mark in enumerate(row):
+                current_pos = Point(row_index, col_index)
+                if self.check_if_win(current_pos, team):
+                    return True
+        return False
+
     def _check_win_pos(self, last_placement: Point, team: Mark, offset_dir: Point) -> bool:
         current_pos = last_placement
         # Move to the edge of the board
@@ -93,46 +101,7 @@ class Board:
             current_pos = Point(current_pos.row - offset_dir.row, current_pos.col - offset_dir.col)
         # check we have at least N marks in a straight line
         for i in range(self.board_size):
-            if self.get_mark(current_pos) != team:
+            if self.get_mark(current_pos) != team or self.get_mark(current_pos) is None:
                 return False
             current_pos = Point(current_pos.row + offset_dir.row, current_pos.col + offset_dir.col)
         return True
-
-
-def str_to_point(string: str) -> Point:
-    row, col = string.split(",")
-    return Point(int(row[0]), int(col[0]))
-
-
-class RandomAIAgent:
-    def get_move(self, board: Board) -> Point:
-        return random.choice(board.get_available_spaces())
-
-
-if __name__ == "__main__":
-    board = Board()
-    ai = RandomAIAgent()
-    current_team = Mark.X
-    ai_team = Mark.O
-    is_game_running = True
-
-    while is_game_running:
-        print(board)
-        available_moves = board.get_available_spaces()
-        print(available_moves)
-        if not available_moves:
-            print("No more possible moves")
-            exit(0)
-
-        if current_team == ai_team:
-            move_point = ai.get_move(board)
-        else:
-            move_str = input("Move (in format '1,2'): ")
-            move_point = str_to_point(move_str)
-        if board.set_mark(move_point, current_team):
-            is_game_running = False
-            print("WINNER!")
-        if current_team == Mark.X:
-            current_team = Mark.O
-        else:
-            current_team = Mark.X
