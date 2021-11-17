@@ -61,6 +61,9 @@ class Board:
         return self.check_if_win(position, mark)
 
     def get_mark(self, position: Point) -> Mark:
+        # Forgot that inn Python negative indices are valid
+        if position.col < 0 or position.row < 0:
+            return None
         try:
             return self._board[position.row][position.col]
         except IndexError:
@@ -95,13 +98,26 @@ class Board:
         return False
 
     def _check_win_pos(self, last_placement: Point, team: Mark, offset_dir: Point) -> bool:
+        """
+        Check that we have at least N marks in a straight line
+        """
+        num_matches = 0
+        if self.get_mark(last_placement) == team:
+            num_matches += 1
+
+        # check how many matching marks we have in a straight line going forward
         current_pos = last_placement
-        # Move to the edge of the board
-        while current_pos.row > 0 and current_pos.col > 0:
-            current_pos = Point(current_pos.row - offset_dir.row, current_pos.col - offset_dir.col)
-        # check we have at least N marks in a straight line
         for i in range(self.board_size):
-            if self.get_mark(current_pos) != team or self.get_mark(current_pos) is None:
-                return False
             current_pos = Point(current_pos.row + offset_dir.row, current_pos.col + offset_dir.col)
-        return True
+            if self.get_mark(current_pos) == team:
+                num_matches += 1
+
+        # check how many matching marks we have in a straight line going backwards
+        current_pos = dataclasses.replace(last_placement)
+        for i in range(self.board_size):
+            current_pos = Point(current_pos.row - offset_dir.row, current_pos.col - offset_dir.col)
+            if self.get_mark(current_pos) == team:
+                num_matches += 1
+
+        assert num_matches <= self.board_size
+        return num_matches == self.board_size
