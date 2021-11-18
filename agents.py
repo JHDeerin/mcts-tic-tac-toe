@@ -47,9 +47,12 @@ class GameState:
         if player is None:
             player = self.player
 
+        # TODO: Assumes only 2 players; should check all players
         if self.board.check_if_win_anywhere(player):
             return 1.0
-        if not self.board.get_available_spaces():
+        if (not self.board.get_available_spaces()
+            and not self.board.check_if_win_anywhere(self.get_next_player(player))
+            ):
             return 0.5
         return 0
 
@@ -117,7 +120,7 @@ class MCTSAgent:
     """
     A Monte-Carlo Tree Search implementation that can play tic-tac-toe.
     """
-    def get_move(self, state: GameState, iterations: int=1000) -> Point:
+    def get_move(self, state: GameState, iterations: int=1000, verbose: bool=False) -> Point:
         """
         Returns the move to play given the current board state.
         """
@@ -126,7 +129,7 @@ class MCTSAgent:
         for i in range(iterations):
             score = self.mcts(root, state)
             root.update(score)
-        return self._get_best_move(root)
+        return self._get_best_move(root, verbose)
 
     def mcts(self, node: MCTSNode, state: GameState) -> Dict[Mark, float]:
         """
@@ -165,8 +168,10 @@ class MCTSAgent:
         player_score = current_state.get_score(player)
         return {player: player_score}
 
-    def _get_best_move(self, root: MCTSNode) -> Action:
+    def _get_best_move(self, root: MCTSNode, verbose: bool=False) -> Action:
         # NOTE: Should still work, since the child of the root node should still
         # all be counting the scores for the initial player
         actions_w_avg_score = {action: child.average_score() for action, child in root.children.items()}
+        if verbose:
+            print(f"CONSIDERED ACTIONS: {actions_w_avg_score}")
         return max(actions_w_avg_score, key=actions_w_avg_score.get)

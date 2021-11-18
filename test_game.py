@@ -1,9 +1,7 @@
-from re import X
-from _pytest.mark.structures import Mark
 import pytest
 
-
 from game import Board, Mark, Point
+from agents import Action, GameState, MCTSAgent
 
 
 @pytest.fixture
@@ -62,6 +60,23 @@ def test_simple_vertical_win(board: Board):
     assert board.check_if_win_anywhere(team=Mark.O) == True
 
 
+def test_simple_horizontal_win(board: Board):
+    """
+    ======
+     |O|
+     |O|
+    X|X|X
+    ======
+    """
+    board.set_mark(Point(0,1), Mark.O)
+    board.set_mark(Point(1,1), Mark.O)
+    board.set_mark(Point(2,0), Mark.X)
+    board.set_mark(Point(2,1), Mark.X)
+    board.set_mark(Point(2,2), Mark.X)
+    assert board.check_if_win(last_placement=Point(2,2), team=Mark.X) == True
+    assert board.check_if_win_anywhere(team=Mark.X) == True
+
+
 def test_simple_upwards_diagonal_board_counts_as_win(board: Board):
     """
     ======
@@ -99,7 +114,7 @@ def test_upwards_diagonal_board_counts_as_win(board: Board):
     assert board.check_if_win_anywhere(team=Mark.X) == True
 
 
-def test_mcts_ai_error_pos():
+def test_mcts_ai_error_pos(board: Board):
     """
     ======
     X|O|
@@ -109,6 +124,29 @@ def test_mcts_ai_error_pos():
 
     In a test game w/ O to move, the AI played 0,2 instead of 2,2, letting me
     win; need to confirm this happens and fix it if so
+
+    ======
+    O| |O
+     |X|
+    X| |
+    ======
+    Ditto case; AI to move as X, AI played 2,1 instead of 0,1, letting me win from behind
+
+    ...this could just be a sampling issue (apparently 9! ~= 300,000, which is
+    higher than I thought, so it might simply not be covering every case...but
+    then why did it fail for the top case?)
     """
     # TODO: Implement this
-    pass
+    board.set_mark(Point(0,0), Mark.X)
+    board.set_mark(Point(1,2), Mark.X)
+    board.set_mark(Point(2,0), Mark.X)
+    board.set_mark(Point(2,1), Mark.X)
+    board.set_mark(Point(0,1), Mark.O)
+    board.set_mark(Point(1,0), Mark.O)
+    board.set_mark(Point(1,1), Mark.O)
+    state = GameState(board, player=Mark.O)
+
+    ai = MCTSAgent()
+    ai_action = ai.get_move(state, iterations=2, verbose=True)
+    expected = Action(Point(2,2), player=Mark.O)
+    assert ai_action == expected
