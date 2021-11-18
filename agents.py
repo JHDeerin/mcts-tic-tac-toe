@@ -38,6 +38,8 @@ class GameState:
             return Mark.X
 
     def get_actions(self) -> list:
+        if self.is_terminal():
+            return []
         return [
             Action(pos, self.player)
             for pos in self.board.get_available_spaces()
@@ -50,9 +52,9 @@ class GameState:
         # TODO: Assumes only 2 players; should check all players
         if self.board.check_if_win_anywhere(player):
             return 1.0
-        if (not self.board.get_available_spaces()
-            and not self.board.check_if_win_anywhere(self.get_next_player(player))
-            ):
+        if self.board.check_if_win_anywhere(self.get_next_player(player)):
+            return 0.0
+        if not self.board.get_available_spaces():
             return 0.5
         return 0
 
@@ -161,6 +163,11 @@ class MCTSAgent:
     # TODO:
     def playout(self, state: GameState, player: Mark) -> Dict[Mark, float]:
         current_state = state
+        # print("====")
+        # print(state.board)
+        # print(f"{state.player} | {player}")
+        # # print(current_state.is_terminal())
+        # print("====")
         while not current_state.is_terminal():
             random_action = random.choice(current_state.get_actions())
             current_state = current_state.get_next_state(random_action)
@@ -173,5 +180,11 @@ class MCTSAgent:
         # all be counting the scores for the initial player
         actions_w_avg_score = {action: child.average_score() for action, child in root.children.items()}
         if verbose:
-            print(f"CONSIDERED ACTIONS: {actions_w_avg_score}")
+            print(f"CONSIDERED ACTIONS:")
+            for action, child in root.children.items():
+                print(f"{action}: {child.average_score()}")
+                child_opposing_moves = {action2: child2.average_score() for action2, child2 in child.children.items()}
+                print(f"\tOpposing moves: {child_opposing_moves}")
+                # best_opposing_move =
+                print(f"\tBest Opposing move Children: {child.children}")
         return max(actions_w_avg_score, key=actions_w_avg_score.get)
