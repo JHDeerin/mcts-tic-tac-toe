@@ -5,7 +5,7 @@ import copy
 import dataclasses
 import math
 import random
-from typing import Dict
+from typing import Dict, List
 
 from game import Board, Mark, Point
 
@@ -37,6 +37,12 @@ class GameState:
         else:
             return Mark.X
 
+    def get_all_players(self) -> List[Mark]:
+        return [
+            Mark.O,
+            Mark.X
+        ]
+
     def get_actions(self) -> list:
         if self.is_terminal():
             return []
@@ -49,11 +55,11 @@ class GameState:
         if player is None:
             player = self.player
 
-        # TODO: Assumes only 2 players; should check all players
         if self.board.check_if_win_anywhere(player):
             return 1.0
-        if self.board.check_if_win_anywhere(self.get_next_player(player)):
-            return 0.0
+        for other_player in self.get_all_players():
+            if other_player != player and self.board.check_if_win_anywhere(other_player):
+                return 0.0
         if not self.board.get_available_spaces():
             return 0.5
         return 0
@@ -61,8 +67,10 @@ class GameState:
     def is_terminal(self) -> bool:
         return (
             not self.board.get_available_spaces()
-            or self.board.check_if_win_anywhere(Mark.X)
-            or self.board.check_if_win_anywhere(Mark.O)
+            or any([
+                self.board.check_if_win_anywhere(player) 
+                for player in self.get_all_players()
+            ])
         )
 
 
@@ -173,7 +181,12 @@ class MCTSAgent:
             current_state = current_state.get_next_state(random_action)
         # Get the score for the original player (not the one who won)
         player_score = current_state.get_score(player)
-        return {player: player_score}
+        # If the player won, count that against all other players
+        all_scores = {}
+        if player_score == 1.0:
+            all_scores = {other_player: -1.0 for other_player in state.get_all_players()}
+        all_scores[player] = player_score
+        return all_scores
 
     def _get_best_move(self, root: MCTSNode, verbose: bool=False) -> Action:
         # NOTE: Should still work, since the child of the root node should still
