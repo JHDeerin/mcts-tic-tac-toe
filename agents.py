@@ -156,7 +156,6 @@ class MCTSAgent:
             if not node.children:
                 node.expand(state)
             # Handle edge case where the expanded node still has no children
-            # TODO: Is this always because the state is terminal?
             if node.children:
                 best_child = node.get_best_child()
                 player_scores = self.mcts(
@@ -168,14 +167,8 @@ class MCTSAgent:
         node.update(player_scores)
         return player_scores
 
-    # TODO:
     def playout(self, state: GameState, player: Mark) -> Dict[Mark, float]:
         current_state = state
-        # print("====")
-        # print(state.board)
-        # print(f"{state.player} | {player}")
-        # # print(current_state.is_terminal())
-        # print("====")
         while not current_state.is_terminal():
             random_action = random.choice(current_state.get_actions())
             current_state = current_state.get_next_state(random_action)
@@ -198,6 +191,5 @@ class MCTSAgent:
                 print(f"{action}: {child.average_score()}")
                 child_opposing_moves = {action2: child2.average_score() for action2, child2 in child.children.items()}
                 print(f"\tOpposing moves: {child_opposing_moves}")
-                # best_opposing_move =
                 print(f"\tBest Opposing move Children: {child.children}")
         return max(actions_w_avg_score, key=actions_w_avg_score.get)
